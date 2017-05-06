@@ -77,10 +77,65 @@ public class TestBot1 extends DefaultBWListener {
                     myUnit.gather(closestMineral, false);
                 }
             }
+
+            if(myUnit.getType().isWorker() && (self.supplyTotal() - self.supplyUsed()<2) && (self.minerals() >=100))
+            {
+                TilePosition buildTile = getBuildTile(myUnit,UnitType.Terran_Supply_Depot,self.getStartLocation());
+                if(buildTile != null){
+                    myUnit.build(UnitType.Terran_Supply_Depot,buildTile);
+                    break;
+                }
+            }
+
         }
+
+
+
 
         //draw my units on screen
         game.drawTextScreen(10, 25, units.toString());
+    }
+
+    private TilePosition getBuildTile(Unit builder, UnitType buildingType, TilePosition position)
+    {
+        TilePosition ret = null;
+        int maxDist = 3;
+        int stopDist = 40;
+
+        // Refinery, Assimilator, Extractor
+        if (buildingType.isRefinery()) {
+            for (Unit n : game.neutral().getUnits()) {
+                if ((n.getType() == UnitType.Resource_Vespene_Geyser) &&
+                        ( Math.abs(n.getTilePosition().getX() - position.getX()) < stopDist ) &&
+                        ( Math.abs(n.getTilePosition().getY() - position.getY()) < stopDist )
+                        ) return n.getTilePosition();
+            }
+        }
+
+        while ((maxDist < stopDist) && (ret == null)) {
+            for (int i=position.getX()-maxDist; i<=position.getX()+maxDist; i++) {
+                for (int j=position.getY()-maxDist; j<=position.getY()+maxDist; j++) {
+                    if (game.canBuildHere(new TilePosition(i,j), buildingType, builder, false)) {
+                        // units that are blocking the tile
+                        boolean unitsInWay = false;
+                        for (Unit u : game.getAllUnits()) {
+                            if (u.getID() == builder.getID()) continue;
+                            if ((Math.abs(u.getTilePosition().getX()-i) < 4) && (Math.abs(u.getTilePosition().getY()-j) < 4)) unitsInWay = true;
+                        }
+                        if (!unitsInWay) {
+                            return new TilePosition(i, j);
+                        }
+
+                    }
+                }
+            }
+            maxDist += 2;
+        }
+
+        if (ret == null) game.printf("Unable to find suitable build position for "+buildingType.toString());
+        return ret;
+
+
     }
 
     public static void main(String[] args) {
